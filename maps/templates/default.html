@@ -1,0 +1,82 @@
+{% load bootstrap4 %}
+{% load leaflet_tags %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+
+{% bootstrap_css %}
+{% bootstrap_javascript jquery='full' %}
+{% bootstrap_messages %}
+{% leaflet_js %}
+{% leaflet_css %}
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Social Flood</title>
+        <script src='https://api.mapbox.com/mapbox-gl-js/v0.54.0/mapbox-gl.js'></script>
+        <script src='https://api.mapbox.com/mapbox.js/plugins/turf/v3.0.11/turf.min.js'></script>
+        <link href='https://api.mapbox.com/mapbox-gl-js/v0.54.0/mapbox-gl.css' rel='stylesheet' />
+        <link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
+        <script src="{% static 'javascript/script.js' %}"></script>
+
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <a class="navbar-brand" href="#">Social Flood</a>
+            <button class="navbar-toggler"
+                    type="button"
+                    data-toggle="collapse"
+                    data-target="#navbarSupportedContent"
+                    aria-controls="navbarSupportedContent"
+                    aria-expanded="false"
+                    aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav mr-auto">
+              <li class="nav-item active">
+                <a class="nav-link" href="#">Home <span class="sr-only">(current)</span></a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true">About</a>
+              </li>
+            </ul>
+            </div>
+        </nav>
+
+    </head>
+    <body>
+        <div class="container">
+            <div class="row">
+                <div id="col-map" class="col-12">
+                    <div id='map'  style='height:600px; width:100%'></div>
+                </div>
+                <div id="form-map" class="col-4 d-none">
+                    <form method="post" enctype="multipart/form-data" action="">
+                        {% csrf_token %}
+                        <table>
+                            {{ point_form|crispy }}
+                        </table>
+                        <button type="submit" class="btn btn-success">Submit</button>
+                    </form>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12 text-right">
+                    <button id="add-button"
+                            type="button"
+                            class="btn btn-primary"
+                            onclick="add_image()">Add New Image</button>
+                </div>
+            </div>
+        </div>
+
+
+        <script>
+            init_map("{{ mapbox_access_token }}",
+            "{{ point_form.latitude.id_for_label }}",
+            "{{ point_form.longitude.id_for_label }}");
+        </script>
+
+    </body>
+</html>
