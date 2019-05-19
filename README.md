@@ -1,6 +1,6 @@
 # Social Flood
 
-Website, that uses [mapbox](https://www.mapbox.com/) to display in a map, all the geo-referenced images used in my MSc
+Website that uses [mapbox](https://www.mapbox.com/) to display in a map, all the geo-referenced images used in my MSc
 thesis experiments. 
 
 ### How to use
