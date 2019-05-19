@@ -9,5 +9,5 @@ The code was developed and tested in Python 3.6.7 with [Django](https://www.djan
 To run the script simply execute:
 
 ```console
-python3 manage.py runserver
+$ python3 manage.py runserver
 ```
