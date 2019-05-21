@@ -5,7 +5,9 @@ from django.conf.urls.static import static
 from . import views
 
 urlpatterns = [
-    url("get_geojson", views.get_geojson, name="get_geojson"),
+    url('download', views.download, name="download"),
+    url('get_geojson', views.get_geojson, name="get_geojson"),
+    url('images', views.images, name="images"),
     url(r'', views.default_map, name="default")
 ]
 

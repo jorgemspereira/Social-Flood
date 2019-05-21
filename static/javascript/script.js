@@ -148,3 +148,27 @@ function add_image() {
     }
 }
 
+function bodyOnLoad() {
+    const imgs = document.querySelectorAll('[data-src]');
+
+    const lazyLoad = target => {
+        const io = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.src = entry.target.dataset.src;
+                    observer.disconnect();
+                }
+            });
+        });
+
+        io.observe(target);
+    };
+
+    imgs.forEach(lazyLoad);
+}
+
+function downloadImages() {
+    document.getElementById("download-button").disabled = true;
+    document.getElementById("download-button").innerHTML = "Please wait...";
+    return true;
+}
