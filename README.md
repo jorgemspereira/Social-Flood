@@ -15,6 +15,6 @@ $ python3 manage.py runserver
 ```
 
 It may take a while to start the server, since the [Keras](https://keras.io/) model is being loaded. 
-When the server is running, to access the website please go to `http://127.0.0.1:8000/maps/`, your page should look similar to the one below.
+When the server starts running, to access the main page, please go to `http://127.0.0.1:8000/maps/`, your page should look similar to the one below.
 
 ![screenshot](readme/mainpage.png)
