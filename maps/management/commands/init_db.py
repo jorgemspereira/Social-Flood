@@ -3,81 +3,95 @@ import json
 import os
 
 import pandas as pd
-from django.conf import settings
-from django.core.files.images import ImageFile
 from django.core.management.base import BaseCommand
 
 from maps.models import Point
 
 
-def read_dataset_and_metadata(dataset_path, metadata_path):
-    all_df = pd.read_csv(dataset_path, names=['filename', 'class'])
-    flooded_df = all_df.drop(all_df[all_df['class'] != 1].index).reset_index(drop=True)
-    flooded_df = flooded_df.drop(['class'], axis=1).reset_index(drop=True)
+def read_metadata(metadata_path):
+    with open(metadata_path, encoding="utf-8") as f:
+        data = json.load(f, encoding='utf-8')
+    return data
+
+
+def read_dataset(dataset_path):
+    flooded_df = pd.read_csv(dataset_path, names=['filename', 'font', 'class', 'height'])
 
     flooded_df['year'], flooded_df['month'], flooded_df['day'] = None, None, None
     flooded_df['latitude'], flooded_df['longitude'] = None, None
 
-    with open(metadata_path, encoding="utf-8") as f:
-        data = json.load(f, encoding='utf-8')
-
-    return flooded_df, data
+    return flooded_df
 
 
-def get_flooded_mediaeval_info(classification_path, metadata_path):
-    flooded_df, metadata = read_dataset_and_metadata(classification_path, metadata_path)
+def handle_eu_floods_metadata(entry, metadata):
+    image_entry = [obj for obj in metadata if str(obj['pageid']) == str(entry['filename'])][0]
 
-    for index, row in flooded_df.iterrows():
-        try:
-            image_entry = [obj for obj in metadata['images'] if obj['image_id'] == str(row['filename'])][0]
+    date_taken = image_entry['capture_time']
+    date_taken = datetime.datetime.strptime(date_taken, '%Y-%m-%dT%H:%M:%S').timetuple()
 
-            date_taken = image_entry['date_taken'].split(".")[0]
-            date_taken = datetime.datetime.strptime(date_taken, '%Y-%m-%d %H:%M:%S').timetuple()
+    entry['longitude'] = image_entry['coordinates']['lon']
+    entry['latitude'] = image_entry['coordinates']['lat']
 
-            row['year'] = date_taken.tm_year
-            row['month'] = date_taken.tm_mon
-            row['day'] = date_taken.tm_mday
+    entry['year'] = date_taken.tm_year
+    entry['month'] = date_taken.tm_mon
+    entry['day'] = date_taken.tm_mday
 
-            row['longitude'] = image_entry['longitude']
-            row['latitude'] = image_entry['latitude']
-
-            flooded_df.iloc[index] = row
-        except TypeError:
-            pass
-
-    return flooded_df.dropna().reset_index(drop=True)
+    return entry
 
 
-def get_flooded_europeanfloods_info(classification_path, metadata_path):
-    flooded_df, metadata = read_dataset_and_metadata(classification_path, metadata_path)
+def handle_mediaeval_metadata(entry, metadata):
+    image_entry = [obj for obj in metadata['images'] if obj['image_id'] == str(entry['filename'])][0]
 
-    for index, row in flooded_df.iterrows():
-        try:
-            image_entry = [obj for obj in metadata if str(obj['pageid']) == str(row['filename'])][0]
+    date_taken = image_entry['date_taken'].split(".")[0]
+    date_taken = datetime.datetime.strptime(date_taken, '%Y-%m-%d %H:%M:%S').timetuple()
 
-            date_taken = image_entry['capture_time']
-            date_taken = datetime.datetime.strptime(date_taken, '%Y-%m-%dT%H:%M:%S').timetuple()
+    entry['year'] = date_taken.tm_year
+    entry['month'] = date_taken.tm_mon
+    entry['day'] = date_taken.tm_mday
 
-            row['year'] = date_taken.tm_year
-            row['month'] = date_taken.tm_mon
-            row['day'] = date_taken.tm_mday
+    entry['longitude'] = image_entry['longitude']
+    entry['latitude'] = image_entry['latitude']
 
-            row['longitude'] = image_entry['coordinates']['lon']
-            row['latitude'] = image_entry['coordinates']['lat']
-
-            flooded_df.iloc[index] = row
-        except (KeyError, IndexError, TypeError):
-            pass
-
-    return flooded_df.dropna().reset_index(drop=True)
+    return entry
 
 
-def add_to_db(df, source):
+def get_flooded_info(flooded_info, mediaeval_train, mediaeval_test, european_floods):
+    for index, row in flooded_info.iterrows():
+
+        if row['font'] == "european_floods_2013":
+            handle_eu_floods_metadata(row, european_floods)
+        elif row['font'] == "mediaeval_2017_train":
+            handle_mediaeval_metadata(row, mediaeval_train)
+        elif row['font'] == "mediaeval_2017_test":
+            handle_mediaeval_metadata(row, mediaeval_test)
+        else:
+            raise ValueError("Font not recognized.")
+
+        flooded_info.iloc[index] = row
+
+    return flooded_info
+
+
+def add_to_db(df):
     for index, row in df.iterrows():
+
+        if row['font'] == "mediaeval_2017_test":
+            source = "MediaEval 2017 Test"
+        elif row['font'] == "mediaeval_2017_train":
+            source = "MediaEval 2017 Train"
+        elif row['font'] == "european_floods_2013":
+            source = "European Floods 2013 "
+        else:
+            raise ValueError("Font not recognized.")
+
+        print(row)
+
         query = Point.objects.create(source=source,
                                      name=row['filename'],
                                      longitude=row['longitude'],
                                      latitude=row['latitude'],
+                                     label=int(row['class']),
+                                     flood_height=round(row['height'], 4),
                                      date="{}-{}-{}".format(row['year'], row['month'], row['day']),
                                      image="images/{}.jpg".format(row['filename']))
         query.save()
@@ -91,18 +105,11 @@ class Command(BaseCommand):
 
         current_path = os.path.dirname(os.path.abspath(__file__))
 
-        mediaeval_test_df = get_flooded_mediaeval_info(
-            "{}/files_init_db/mediaeval2017_testset_gt.csv".format(current_path),
-            "{}/files_init_db/mediaeval2017_testset_metadata.json".format(current_path))
+        mediaeval_test_mdt = read_metadata("{}/files_init_db/mediaeval2017_testset_metadata.json".format(current_path))
+        mediaeval_train_mdt = read_metadata("{}/files_init_db/mediaeval2017_devset_metadata.json".format(current_path))
+        european_floods_mdt = read_metadata("{}/files_init_db/european_floods_2013_metadata.json".format(current_path))
+        flood_heights = read_dataset("{}/files_init_db/flood_height.csv".format(current_path))
 
-        mediaeval_train_df = get_flooded_mediaeval_info(
-            "{}/files_init_db/mediaeval2017_devset_gt.csv".format(current_path),
-            "{}/files_init_db/mediaeval2017_devset_metadata.json".format(current_path))
+        result = get_flooded_info(flood_heights, mediaeval_train_mdt, mediaeval_test_mdt, european_floods_mdt)
 
-        european_floods_df = get_flooded_europeanfloods_info(
-            "{}/files_init_db/european_floods_2013_gt.csv".format(current_path),
-            "{}/files_init_db/european_floods_2013_metadata.json".format(current_path))
-
-        add_to_db(mediaeval_test_df, "MediaEval 2017 Test Split")
-        add_to_db(mediaeval_train_df, "MediaEval 2017 Train Split")
-        add_to_db(european_floods_df, "European Floods 2013")
+        add_to_db(result)

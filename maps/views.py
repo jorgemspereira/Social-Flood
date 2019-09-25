@@ -1,33 +1,73 @@
-import zipfile
-
-from io import BytesIO
 import os
+import zipfile
+from base64 import b64encode, b64decode
+from io import BytesIO
 
-from django.http import HttpResponseRedirect, JsonResponse, HttpResponse
-from django.shortcuts import render
-from geojson import Point as P
+import numpy as np
+from django.core.files.base import ContentFile
+from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
+from django.shortcuts import render, redirect
+from django.urls import reverse
 from geojson import Feature, FeatureCollection
-from tqdm import tqdm
+from geojson import Point as P
+from keras.preprocessing.image import load_img, img_to_array
 
-from SocialFlood.settings import BASE_DIR
-from maps.models import PointForm, Point
+from SocialFlood.settings import BASE_DIR, MB_ACCESS_TK, gGraph, gModel
+from maps.models import PointForm, Point, PointFormComplete
+
+
+def pre_process_img(img):
+    x = load_img(img, target_size=(224, 224))
+    x = img_to_array(x)
+    x = np.divide(x, 255)
+    return np.expand_dims(x, axis=0)
 
 
 def default_map(request):
-    # TODO: move this token to Django settings from an environment variable
-    mapbox_access_token = 'pk.eyJ1Ijoiam9yZ2Vtc3BlcmVpcmEiLCJhIjoiY2p2ZmJ4anY1MGxhbTQzcGhzOGplMWZoYiJ9.TtOPvUUKoZs27eJGzWDJKQ'
-
     if request.method == 'POST':
         point_form = PointForm(request.POST, request.FILES)
-        if point_form.is_valid():
-            query = Point.objects.create(**point_form.cleaned_data)
-            query.save()
-            return HttpResponseRedirect('/lol/')
-    else:
-        point_form = PointForm()
+        point_form_complete = PointFormComplete(request.POST, request.FILES)
 
-    return render(request, 'default.html', {'mapbox_access_token': mapbox_access_token,
-                                            'point_form': point_form})
+        if point_form.is_valid():
+            query = Point(**point_form.cleaned_data)
+            content = b64encode(query.image.file.read()).decode('ascii')
+
+            with gGraph.as_default():
+                predictions = gModel.predict(pre_process_img(query.image), batch_size=1)
+
+            label = np.argmax(predictions[0])
+            height = round(predictions[1][0][0], 4)
+
+            point_form_complete = PointFormComplete(initial=
+                                                    {'label': Point._meta.get_field('label').choices[label],
+                                                     'flood_height': height,
+                                                     'source': query.source,
+                                                     'name': query.name,
+                                                     'longitude': query.longitude,
+                                                     'latitude': query.latitude,
+                                                     'date': query.date})
+
+            request.session['image'] = content
+            request.session['image_path'] = query.image.name
+            ext = query.image.name.split(".")[-1]
+
+            return render(request, 'default.html', {'mapbox_access_token': MB_ACCESS_TK,
+                                                    'image_src': "data:image/" + ext + ";base64," + content,
+                                                    'point_form_complete': point_form_complete})
+
+        if point_form_complete.is_valid():
+            query = Point.objects.create(**point_form_complete.cleaned_data)
+            query.image.save(request.session['image_path'],
+                             ContentFile(b64decode(request.session['image'])))
+            query.save()
+            return HttpResponseRedirect("default.html")
+
+    return render(request, 'default.html', {'mapbox_access_token': MB_ACCESS_TK, 'point_form': PointForm(),
+                                            'point_form_complete': None})
+
+
+def back_button(request):
+    return redirect(reverse('maps'))
 
 
 def images(request):
@@ -42,10 +82,22 @@ def images(request):
 def get_geojson(request):
     features = []
     for point in Point.objects.all():
-        properties = {"description": "<h5  align=\"center\">{}</h5>"
-                                     "<img height=\"200\" width=\"200\" src=/media/{}> "
-                                     "<p style=\"margin-bottom:0\">"
-                                     "<b>Source: </b>{}</p>".format(point.name, point.image, point.source)}
+        if point.label is None:
+            properties = {"description": "<h5  align=\"center\">{}</h5>"
+                                         "<img height=\"200\" width=\"200\" src=/media/{}> "
+                                         "<p style=\"margin-bottom:0\">"
+                                         "<b>Source: </b>{}</p>".format(point.name, point.image, point.source)}
+        else:
+            properties = {"description": "<h5  align=\"center\">{}</h5>"
+                                         "<img height=\"200\" width=\"200\" src=/media/{}> "
+                                         "<p style=\"margin-bottom:0\">"
+                                         "<b>Source: </b>{}</p>"
+                                         "<p style=\"margin-bottom:0\">"
+                                         "<b>Class: </b>{}</p>"
+                                         "<p style=\"margin-bottom:0\">"
+                                         "<b>Height: </b>{} m</p>".format(point.name, point.image, point.source,
+                                                                          Point._meta.get_field('label').choices[point.label][1],
+                                                                          point.flood_height)}
         features.append(Feature(geometry=P([point.longitude, point.latitude]), properties=properties))
 
     feature_collection = FeatureCollection(features)
@@ -53,7 +105,6 @@ def get_geojson(request):
 
 
 def download(request):
-    print("lol")
     media_root = os.path.join(BASE_DIR, 'media')
     filenames = os.listdir(media_root + "\\images")
     filenames = [media_root + "\\images\\" + f for f in filenames]

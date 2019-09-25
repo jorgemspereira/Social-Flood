@@ -12,7 +12,12 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 
 import os
 
+import tensorflow as tf
+from keras.engine.saving import load_model
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
+from static.keras.aux_keras import OutputLayer, custom_activation_more_1m, custom_activation_less_1m
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -21,6 +26,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = '*j#%&3)4+mt^no*t56iqk_i63aql^iv+dxk!yi5_$367t^6429'
+MB_ACCESS_TK = 'pk.eyJ1Ijoiam9yZ2Vtc3BlcmVpcmEiLCJhIjoiY2p2ZmJ4anY1MGxhbTQzcGhzOGplMWZoYiJ9.TtOPvUUKoZs27eJGzWDJKQ'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -122,7 +128,7 @@ USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/2.2/howto/static-files/
+# https://docs.djangoproject.com/en/2.2/howto/static-files/DJANGO_SETTINGS_MODULE
 
 STATIC_URL = '/static/'
 
@@ -135,3 +141,22 @@ STATICFILES_DIRS = [
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+gGraph = None
+gModel = None
+
+
+def _load_model_from_path(path):
+    global gGraph
+    global gModel
+    gGraph = tf.get_default_graph()
+    custom_object = {'OutputLayer': OutputLayer,
+                     'custom_activation_more_1m': custom_activation_more_1m,
+                     'custom_activation_less_1m': custom_activation_less_1m}
+    gModel = load_model(path, custom_objects=custom_object)
+
+
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
+_load_model_from_path(os.path.join(BASE_DIR, "static") + "/keras/weights.hdf5")

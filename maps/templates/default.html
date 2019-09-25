@@ -35,7 +35,7 @@
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav mr-auto">
                 <li class="nav-item active">
-                    <a class="nav-link" href="#">Home <span class="sr-only">(current)</span></a>
+                    <a class="nav-link" href="#">Home<span class="sr-only">(current)</span></a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="images">Images</a>
@@ -58,28 +58,45 @@
                     <form method="post" enctype="multipart/form-data" action="">
                         {% csrf_token %}
                         <table>
-                            {{ point_form|crispy }}
+                                {% if point_form_complete %}
+                                    <div id="to_show">
+                                        <label class="col-form-label">Selected Image</label>
+                                        <img height="20%" width="100%" src="{{image_src}}">
+                                        {{ point_form_complete|crispy }}
+                                    </div>
+                                {%  else %}
+                                    {{ point_form|crispy }}
+                                {% endif %}
                         </table>
+
+                        {% if point_form_complete %}
+                            <a href="back_button" class="btn btn-danger">Cancel</a>
+                        {% endif %}
+
                         <button type="submit" class="btn btn-success">Submit</button>
                     </form>
                 </div>
             </div>
+
+            <script>
+                init_map("{{ mapbox_access_token }}",
+                "{{ point_form.latitude.id_for_label }}",
+                "{{ point_form.longitude.id_for_label }}");
+            </script>
+
             <div class="row">
                 <div class="col-12 text-right">
                     <button id="add-button"
                             type="button"
                             class="btn btn-primary"
                             onclick="add_image()">Add New Image</button>
+                    {% if point_form_complete %}
+                        <script>add_image();</script>
+
+                    {% endif %}
                 </div>
             </div>
         </div>
-
-
-        <script>
-            init_map("{{ mapbox_access_token }}",
-            "{{ point_form.latitude.id_for_label }}",
-            "{{ point_form.longitude.id_for_label }}");
-        </script>
 
     </body>
 </html>
