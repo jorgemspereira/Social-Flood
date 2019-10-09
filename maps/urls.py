@@ -8,6 +8,7 @@ urlpatterns = [
     url('download', views.download, name="download"),
     url('get_geojson', views.get_geojson, name="get_geojson"),
     url('images', views.images, name="images"),
+    url('about', views.about, name="about"),
     url(r'', views.default_map, name="default")
 ]
 

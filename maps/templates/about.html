@@ -14,9 +14,7 @@
 <html>
     <head>
         <title>Social Flood</title>
-        <script src='https://api.mapbox.com/mapbox-gl-js/v0.54.0/mapbox-gl.js'></script>
-        <script src='https://api.mapbox.com/mapbox.js/plugins/turf/v3.0.11/turf.min.js'></script>
-        <link href='https://api.mapbox.com/mapbox-gl-js/v0.54.0/mapbox-gl.css' rel='stylesheet' />
+
         <link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
         <script src="{% static 'javascript/script.js' %}"></script>
 
@@ -37,32 +35,29 @@
                 <li class="nav-item">
                     <a class="nav-link" href="/maps">Home</a>
                 </li>
-                <li class="nav-item active">
-                    <a class="nav-link" href="#">Images<span class="sr-only">(current)</span></a>
-                </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="about" tabindex="-1">About</a>
+                    <a class="nav-link" href="images">Images</a>
+                </li>
+                <li class="nav-item active">
+                    <a class="nav-link" href="#" tabindex="-1">About<span class="sr-only">(current)</span></a>
                 </li>
             </ul>
-              <form class="form-inline my-2 my-lg-0"  action="{% url 'download' %}" onsubmit="return downloadImages();">
-                <button id="download-button" class="btn btn-outline-success my-2 my-sm-0" type="submit" >
-                    Download Images
-                </button>
-              </form>
             </div>
         </nav>
-
     </head>
-    <body onload="bodyOnLoad();">
-        <div class="row2">
-            <div class="column" >
-            {% for img in imgs %}
-                <img width="100%" data-src="/media/images/{{ img }}" onclick="create_modal(this)">
-                {% if forloop.counter|divisibleby:ratio and not forloop.last %}
-                    </div><div class="column" >
-                {% endif %}
-            {% endfor %}
+     <body>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-4 d-flex align-items-center">
+                    <h3>Demo of Jorge Pereira's MSc Thesis</h3>
+                </div>
+                <div class="col-lg-4 d-flex align-items-center">
+                    <h5>Classifying Geo-Referenced Photos and Satellite Imagery for Supporting Terrain Classification</h5>
+                </div>
+                <div class="col-lg-4">
+                    <img width="100%" src="/static/images/ist.png">
+                </div>
             </div>
         </div>
-    </body>
+     </body>
 </html>
