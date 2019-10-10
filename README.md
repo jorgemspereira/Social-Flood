@@ -7,7 +7,7 @@ After having downloaded the file place it under the folder `SocialFlood/static/k
 
 ### How to use
 
-The code was developed and tested in Python 3.6.7 with [Django](https://www.djangoproject.com/) 2.2.1, and [Keras](https://keras.io/) 2.2.4 using Tensorflow as backend.
+The code was developed and tested in [Python](https://www.python.org/) 3.6.7 with [Django](https://www.djangoproject.com/) 2.2.1, and [Keras](https://keras.io/) 2.2.4 using Tensorflow as backend.
 To run the server, simply execute:
 
 ```console
