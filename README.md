@@ -21,6 +21,14 @@ $ python3 manage.py makemigrations
 $ python3 manage.py migrate
 ```
 
+If you want to start the server using the images that I considered in my work, you have to download them from [here](https://drive.google.com/drive/folders/1VEpp3OSyG7naXkFnWDRBksZuPkoD5DCQ),
+and place them under the folder `media/images/` on the root directory of the project. To create the instances on the database, 
+execute the following command:
+
+```console
+$ python3 manage.py init_db
+```
+
 It may take a while to start the server, since the Keras model is being loaded to memory.
 When the server starts running, to access the main page, please go to `http://127.0.0.1:8000/maps/`, your page should look similar to the one below.
 

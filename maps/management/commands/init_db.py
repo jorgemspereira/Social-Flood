@@ -84,8 +84,6 @@ def add_to_db(df):
         else:
             raise ValueError("Font not recognized.")
 
-        print(row)
-
         query = Point.objects.create(source=source,
                                      name=row['filename'],
                                      longitude=row['longitude'],
@@ -97,19 +95,25 @@ def add_to_db(df):
         query.save()
 
 
+def delete_not_used_files(result):
+    names = [str(name) + ".jpg" for name in result['filename'].tolist()]
+    to_delete = [file for file in os.listdir('./media/images/') if file not in names]
+    for file in to_delete:
+        os.remove("./media/images/" + file)
+
+
 class Command(BaseCommand):
     help = 'Seeds the database.'
 
     def handle(self, *args, **options):
         Point.objects.all().delete()
-
         current_path = os.path.dirname(os.path.abspath(__file__))
 
         mediaeval_test_mdt = read_metadata("{}/files_init_db/mediaeval2017_testset_metadata.json".format(current_path))
         mediaeval_train_mdt = read_metadata("{}/files_init_db/mediaeval2017_devset_metadata.json".format(current_path))
         european_floods_mdt = read_metadata("{}/files_init_db/european_floods_2013_metadata.json".format(current_path))
         flood_heights = read_dataset("{}/files_init_db/flood_height.csv".format(current_path))
-
         result = get_flooded_info(flood_heights, mediaeval_train_mdt, mediaeval_test_mdt, european_floods_mdt)
 
+        delete_not_used_files(result)
         add_to_db(result)

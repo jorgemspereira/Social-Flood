@@ -85,7 +85,6 @@ def about(request):
 
 def get_geojson(request):
     features = []
-    media_root = os.path.join(BASE_DIR, 'media')
     for point in Point.objects.all():
         if point.label is None:
             properties = {"description": "<h5  align=\"center\">{}</h5>"
